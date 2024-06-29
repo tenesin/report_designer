@@ -55,33 +55,35 @@ require 'db.php';
         </div>
 
         <div id="caseInputs" style="display: none;">
-            <label for="caseColumn">Select Column for Case:</label>
-            <select name="caseColumn" id="caseColumn">
-                <option value="">Select Column</option>
-            </select>
-            <br><br>
+    <label for="caseType">Case Type:</label>
+    <select name="caseType" id="caseType">
+        <option value="simple">Simple Case</option>
+        <option value="searched">Searched Case</option>
+    </select>
+    <br><br>
 
-            <div id="conditionsContainer">
-                <div class="condition">
-                    <select name="operator[]">
-                        <option value="=">=</option>
-                        <option value="<>">&lt;&gt;</option>
-                        <option value=">">&gt;</option>
-                        <option value=">=">&gt;=</option>
-                        <option value="<">&lt;</option>
-                        <option value="<=">&lt;=</option>
-                        <option value="LIKE">LIKE</option>
-                    </select>
-                    <input type="text" name="value[]" placeholder="Value">
-                    <input type="text" name="result[]" placeholder="Result">
-                    <button type="button" onclick="addCondition()">+</button>
-                </div>
-            </div>
+    <div id="simpleCaseInputs">
+        <label for="caseColumn">Select Column for Case:</label>
+        <select name="caseColumn" id="caseColumn">
+            <option value="">Select Column</option>
+        </select>
+    </div>
 
-            <label for="elseResult">Else Result:</label>
-            <input type="text" name="elseResult" id="elseResult">
-            <br><br>
+    <div id="conditionsContainer">
+        <div class="condition">
+            <input type="text" name="when[]" placeholder="WHEN expression" class="whenInput">
+            <input type="text" name="then[]" placeholder="THEN result">
+            <button type="button" class="addWhen">+ WHEN</button>
+            <button type="button" class="removeCondition" style="display:none;">-</button>
         </div>
+    </div>
+    
+    <br>
+    <label for="elseResult">ELSE Result:</label>
+    <input type="text" name="elseResult" id="elseResult" placeholder="ELSE result">
+    <br><br>
+    <button type="button" id="addConditionBtn">Add Condition</button>
+</div>
 
         <div id="pivotInputs" style="display: none;">
             <label for="pivotColumn">Select Column to Pivot:</label>
@@ -98,9 +100,11 @@ require 'db.php';
 </div>
 
 
-
-
+<div style="display: flex; justify-content: space-between; align-items: center;">
         <button type="submit">Generate Report</button>
+        <button type="button" onclick="logout()">Logout</button>
+    </div>
+
     </form>
 
     <div id="reportResult"></div>
@@ -158,6 +162,12 @@ $('#reportForm').on('submit', function(e) {
         }
     });
 });
+
+function logout() {
+    if (confirm('Are you sure you want to logout?')) {
+        window.location.href = 'logout.php';
+    }
+}
 
         $('#reportForm').on('submit', function(e) {
             e.preventDefault();
@@ -260,26 +270,74 @@ $('#reportForm').on('submit', function(e) {
         }
         
 
-        function addCondition() {
-            var container = document.getElementById('conditionsContainer');
-            var newCondition = document.createElement('div');
-            newCondition.className = 'condition';
-            newCondition.innerHTML = `
-                <select name="operator[]">
-                    <option value="=">=</option>
-                    <option value="<>">&lt;&gt;</option>
-                    <option value=">">&gt;</option>
-                    <option value=">=">&gt;=</option>
-                    <option value="<">&lt;</option>
-                    <option value="<=">&lt;=</option>
-                    <option value="LIKE">LIKE</option>
-                </select>
-                <input type="text" name="value[]" placeholder="Value">
-                <input type="text" name="result[]" placeholder="Result">
-                <button type="button" onclick="removeCondition(this)">-</button>
-            `;
-            container.appendChild(newCondition);
+        document.addEventListener('DOMContentLoaded', function() {
+    const caseType = document.getElementById('caseType');
+    const simpleCaseInputs = document.getElementById('simpleCaseInputs');
+    const conditionsContainer = document.getElementById('conditionsContainer');
+    const addConditionBtn = document.getElementById('addConditionBtn');
+
+    caseType.addEventListener('change', function() {
+        if (this.value === 'simple') {
+            simpleCaseInputs.style.display = 'block';
+            document.querySelectorAll('.whenInput').forEach(input => {
+                input.placeholder = 'WHEN value';
+            });
+        } else {
+            simpleCaseInputs.style.display = 'none';
+            document.querySelectorAll('.whenInput').forEach(input => {
+                input.placeholder = 'WHEN expression';
+            });
         }
+    });
+
+    addConditionBtn.addEventListener('click', addCondition);
+
+    function addCondition() {
+        const newCondition = conditionsContainer.children[0].cloneNode(true);
+        newCondition.querySelectorAll('input[type="text"]').forEach(input => input.value = '');
+        newCondition.querySelector('.removeCondition').style.display = 'inline-block';
+        
+        newCondition.querySelector('.removeCondition').addEventListener('click', function() {
+            conditionsContainer.removeChild(this.parentNode);
+        });
+
+        newCondition.querySelector('.addWhen').addEventListener('click', function() {
+            addWhenClause(this.parentNode);
+        });
+
+        conditionsContainer.appendChild(newCondition);
+    }
+
+    document.querySelector('.addWhen').addEventListener('click', function() {
+        addWhenClause(this.parentNode);
+    });
+
+    document.querySelector('.removeCondition').addEventListener('click', function() {
+        if (conditionsContainer.children.length > 1) {
+            conditionsContainer.removeChild(this.parentNode);
+        }
+    });
+
+    function addWhenClause(conditionElement) {
+        const whenInput = conditionElement.querySelector('.whenInput');
+        const newWhenInput = document.createElement('input');
+        newWhenInput.type = 'text';
+        newWhenInput.name = 'when[]';
+        newWhenInput.placeholder = caseType.value === 'simple' ? 'WHEN value' : 'WHEN expression';
+        newWhenInput.className = 'whenInput';
+        
+        const removeWhenBtn = document.createElement('button');
+        removeWhenBtn.type = 'button';
+        removeWhenBtn.textContent = '- WHEN';
+        removeWhenBtn.addEventListener('click', function() {
+            conditionElement.removeChild(newWhenInput);
+            conditionElement.removeChild(removeWhenBtn);
+        });
+
+        conditionElement.insertBefore(removeWhenBtn, whenInput.nextSibling);
+        conditionElement.insertBefore(newWhenInput, whenInput.nextSibling);
+    }
+});
 
         function removeCondition(button) {
             button.parentElement.remove();

@@ -63,47 +63,71 @@ try {
             $data .= "</table>";
             break;
 
-        case 'case':
-            if (empty($caseColumn)) {
-                throw new Exception('Missing case column.');
-            }
+            case 'case':
+                $caseType = $_POST['caseType'];
+                $caseColumn = isset($_POST['caseColumn']) ? $_POST['caseColumn'] : '';
+                $whenClauses = isset($_POST['when']) ? $_POST['when'] : [];
+                $thenResults = isset($_POST['then']) ? $_POST['then'] : [];
+                $elseResult = isset($_POST['elseResult']) ? $_POST['elseResult'] : '';
             
-            // Parse the WHEN-THEN conditions
-            $conditions = isset($_POST['conditions']) ? json_decode($_POST['conditions'], true) : [];
-            $elseResult = isset($_POST['elseResult']) ? $_POST['elseResult'] : '';
-        
-            if (empty($conditions)) {
-                throw new Exception('Missing WHEN-THEN conditions.');
-            }
-        
-            // Construct the CASE statement
-            $caseStatement = "CASE";
-            $params = [];
-            foreach ($conditions as $index => $condition) {
-                $caseStatement .= " WHEN `$caseColumn` {$condition['operator']} ? THEN ?";
-                $params[] = $condition['value'];
-                $params[] = $condition['result'];
-            }
-            $caseStatement .= " ELSE ? END as case_result";
-            $params[] = $elseResult;
-        
-            // Prepare and execute the query
-            $query = $db->prepare("
-                SELECT `$primaryKey`, `$caseColumn`,
-                $caseStatement
-                FROM `$table`
-            ");
-            $query->execute($params);
-            $results = $query->fetchAll(PDO::FETCH_ASSOC);
-        
-            // Generate the HTML table
-            $data .= "<h2>Case Report</h2>";
-            $data .= "<table border='1'><tr><th>$primaryKey</th><th>$caseColumn</th><th>Case Result</th></tr>";
-            foreach ($results as $row) {
-                $data .= "<tr><td>" . htmlspecialchars($row[$primaryKey]) . "</td><td>" . htmlspecialchars($row[$caseColumn]) . "</td><td>" . htmlspecialchars($row['case_result']) . "</td></tr>";
-            }
-            $data .= "</table>";
-            break;
+                if (empty($whenClauses) || empty($thenResults)) {
+                    throw new Exception('Missing WHEN-THEN conditions.');
+                }
+            
+                // Construct the CASE statement
+                $caseStatement = "CASE";
+                $params = [];
+            
+                if ($caseType === 'simple') {
+                    if (empty($caseColumn)) {
+                        throw new Exception('Missing case column for simple CASE.');
+                    }
+                    $caseStatement .= " `$caseColumn`";
+                    foreach ($whenClauses as $index => $when) {
+                        if (isset($thenResults[$index])) {
+                            $caseStatement .= " WHEN ? THEN ?";
+                            $params[] = $when;
+                            $params[] = $thenResults[$index];
+                        }
+                    }
+                } else { // searched CASE
+                    foreach ($whenClauses as $index => $when) {
+                        if (isset($thenResults[$index])) {
+                            $caseStatement .= " WHEN $when THEN ?";
+                            $params[] = $thenResults[$index];
+                        }
+                    }
+                }
+            
+                $caseStatement .= " ELSE ? END as case_result";
+                $params[] = $elseResult;
+            
+                // Prepare and execute the query
+                $query = $db->prepare("
+                    SELECT *,
+                    $caseStatement
+                    FROM `$table`
+                ");
+                $query->execute($params);
+                $results = $query->fetchAll(PDO::FETCH_ASSOC);
+            
+                // Generate the HTML table
+                $data .= "<h2>Case Report</h2>";
+                $data .= "<table border='1'>";
+                $data .= "<tr>";
+                foreach ($results[0] as $column => $value) {
+                    $data .= "<th>" . htmlspecialchars($column) . "</th>";
+                }
+                $data .= "</tr>";
+                foreach ($results as $row) {
+                    $data .= "<tr>";
+                    foreach ($row as $value) {
+                        $data .= "<td>" . htmlspecialchars($value) . "</td>";
+                    }
+                    $data .= "</tr>";
+                }
+                $data .= "</table>";
+                break;
 
             case 'pivot':
                 if (empty($pivotColumn) || empty($valueColumns)) {

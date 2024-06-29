@@ -28,9 +28,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <form method="post">
         <?php if (isset($error)) { echo "<p>$error</p>"; } ?>
         <label for="username">Username:</label>
-        <input type="text" id="username" name="username" required><br>
+        <input type="text" id="username" placeholder="admin" name="username" required><br>
         <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required><br>
+        <input type="password" id="password" placeholder="password" name="password" required><br>
         <button type="submit">Login</button>
     </form>
 </body>
