@@ -14,6 +14,7 @@ require 'db.php';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Report Generator</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <h1>Generate Report</h1>
@@ -42,7 +43,6 @@ require 'db.php';
             <option value="group_by">Group By</option>
             <option value="case">Case</option>
             <option value="pivot">Pivot</option>
-            <option value="unpivot">Unpivot</option>
         </select>
         <br><br>
 
@@ -95,17 +95,70 @@ require 'db.php';
             <br><br>
         </div>
 
-        <div id="unpivotInputs" style="display: none;">
-            <p>All columns (except the primary key) will be unpivoted.</p>
-        </div>
+</div>
+
+
+
 
         <button type="submit">Generate Report</button>
     </form>
 
     <div id="reportResult"></div>
     <button type="button" id="exportButton" style="display: none;" onclick="exportToExcel()">Export to Excel</button>
+<button type="button" id="unpivotButton" style="display: none;" onclick="unpivotReport()">Unpivot</button>
 
     <script>
+
+function unpivotReport() {
+    var database = $('#database').val();
+    var table = $('#table').val();
+    var pivotColumn = $('#pivotColumn').val();
+    var valueColumns = $('#valueColumns').val();
+
+    $.ajax({
+        url: 'fetch_report.php',
+        type: 'POST',
+        data: {
+            reportType: 'unpivot',
+            database: database,
+            table: table,
+            pivotColumn: pivotColumn,
+            valueColumns: valueColumns
+        },
+        success: function(response) {
+            $('#reportResult').html(response);
+            $('#unpivotButton').hide();
+            $('#exportButton').show();
+        },
+        error: function(xhr, status, error) {
+            $('#reportResult').html('Error: ' + error);
+        }
+    });
+}
+$('#reportForm').on('submit', function(e) {
+    e.preventDefault();
+    var formData = $(this).serialize();
+    var reportType = $('#reportType').val();
+
+    $.ajax({
+        url: 'fetch_report.php',
+        type: 'POST',
+        data: formData,
+        success: function(response) {
+            $('#reportResult').html(response);
+            $('#exportButton').show();
+            if (reportType === 'pivot') {
+                $('#unpivotButton').show();
+            } else {
+                $('#unpivotButton').hide();
+            }
+        },
+        error: function(xhr, status, error) {
+            $('#reportResult').html('Error: ' + error);
+        }
+    });
+});
+
         $('#reportForm').on('submit', function(e) {
             e.preventDefault();
             var formData = $(this).serializeArray();
@@ -130,6 +183,7 @@ require 'db.php';
 
             formData.push({name: 'conditions', value: JSON.stringify(conditions)});
 
+           
             $.ajax({
                 url: 'fetch_report.php',
                 type: 'POST',
@@ -204,6 +258,7 @@ require 'db.php';
                 $('#unpivotInputs').show();
             }
         }
+        
 
         function addCondition() {
             var container = document.getElementById('conditionsContainer');
@@ -279,6 +334,17 @@ require 'db.php';
         $('#table').change(fetchColumns);
         $('#reportType').change(toggleInputs);
         toggleInputs(); // Call this to set initial state
+
+        $('#reportType').change(function() {
+        var reportType = $(this).val();
+        if (reportType === 'pivot') {
+            $('#pivotInputs').show();
+        } else {
+            $('#pivotInputs').hide();
+        }
+        $('#unpivotButton').hide();
+    });
+
 
         $('#reportForm').on('submit', function(e) {
             e.preventDefault();

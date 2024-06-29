@@ -138,7 +138,7 @@ try {
                 $results = $query->fetchAll(PDO::FETCH_ASSOC);
             
                 $data .= "<h2>Pivot Report</h2>";
-                $data .= "<table border='1'><tr><th>Value Column</th>";
+                $data .= "<table border='1'><tr><th>$pivotColumn</th>";
                 foreach ($uniqueValues as $value) {
                     $data .= "<th>" . htmlspecialchars($value) . "</th>";
                 }
@@ -156,69 +156,58 @@ try {
                 break;
             
                 case 'unpivot':
-                    try {
-                        // Fetch all columns from the table
-                        $columnsQuery = $db->query("SHOW COLUMNS FROM `$table`");
-                        $allColumns = $columnsQuery->fetchAll(PDO::FETCH_COLUMN);
-                        
-                        // Get the selected columns for unpivot from the request
-                        $unpivotColumns = isset($_POST['unpivotColumns']) ? $_POST['unpivotColumns'] : '';
-                        $unpivotColumnsArray = explode(',', $unpivotColumns);
-                        $unpivotColumnsArray = array_map('trim', $unpivotColumnsArray);
-                
-                        // Remove the primary key and pivot column from the columns to unpivot
-                        $columnsToUnpivot = array_diff($unpivotColumnsArray, [$primaryKey]);
-                
-                        if (empty($columnsToUnpivot)) {
-                            throw new Exception('No columns to unpivot.');
-                        }
-                
-                        // Construct the UNPIVOT query
-                        $unpivotClauses = [];
-                        foreach ($columnsToUnpivot as $column) {
-                            $unpivotClauses[] = "SELECT `$primaryKey`, " . $db->quote($column) . " AS Employee, `$column` AS Orders FROM `$table` WHERE `$column` IS NOT NULL AND `$column` != ''";
-                        }
-                        $unpivotQuery = implode(" UNION ALL ", $unpivotClauses);
-                
-                        // Add ORDER BY clause
-                        $unpivotQuery .= " ORDER BY `$primaryKey`, Employee";
-                
-                        // Execute the query
-                        $query = $db->prepare($unpivotQuery);
-                        $query->execute();
-                
-                        // Start output buffering
-                        ob_start();
-                
-                        // Generate the HTML table
-                        echo "<h2>Unpivot Report</h2>";
-                        echo "<table border='1'><tr><th>$primaryKey</th><th>Employee</th><th>Orders</th></tr>";
-                
-                        // Fetch and output results in batches
-                        while ($row = $query->fetch(PDO::FETCH_ASSOC)) {
-                            echo "<tr>";
-                            echo "<td>" . htmlspecialchars($row[$primaryKey]) . "</td>";
-                            echo "<td>" . htmlspecialchars($row['Employee']) . "</td>";
-                            echo "<td>" . htmlspecialchars($row['Orders']) . "</td>";
-                            echo "</tr>";
-                
-                            // Flush the output buffer every 100 rows to prevent memory issues
-                            if ($query->rowCount() % 100 == 0) {
-                                ob_flush();
-                                flush();
-                            }
-                        }
-                        echo "</table>";
-                
-                        // End output buffering and return the data
-                        $data = ob_get_clean();
-                
-                    } catch (PDOException $e) {
-                        error_log("Database Error in unpivot: " . $e->getMessage());
-                        throw new Exception("An error occurred while processing the unpivot operation.");
+                    if (empty($pivotColumn) || empty($valueColumns)) {
+                        throw new Exception('Missing pivot parameters.');
                     }
+                
+                    // Parse value columns
+                    $valueColumnsArray = explode(',', $valueColumns);
+                    $valueColumnsArray = array_map('trim', $valueColumnsArray);
+                
+                    // Get unique values for the pivot column
+                    $uniqueValuesQuery = $db->query("SELECT DISTINCT `$pivotColumn` FROM `$table` WHERE `$pivotColumn` IS NOT NULL AND `$pivotColumn` != '' ORDER BY `$pivotColumn`");
+                    $uniqueValues = $uniqueValuesQuery->fetchAll(PDO::FETCH_COLUMN);
+                
+                    // Construct the dynamic pivot query
+                    $pivotClauses = [];
+                    foreach ($uniqueValues as $value) {
+                        $escapedValue = $db->quote($value);
+                        foreach ($valueColumnsArray as $valueColumn) {
+                            $pivotClauses[] = "MAX(CASE WHEN `$pivotColumn` = $escapedValue THEN CAST(`$valueColumn` AS CHAR) END) AS `" . htmlspecialchars($valueColumn) . "($value)`";
+                        }
+                    }
+                    $pivotClause = implode(", ", $pivotClauses);
+                
+                    $pivotQuery = "
+                        SELECT $pivotClause
+                        FROM `$table`
+                    ";
+                
+                    $query = $db->query($pivotQuery);
+                    $results = $query->fetchAll(PDO::FETCH_ASSOC);
+                
+                    $data .= "<h2>Pivot Report</h2>";
+                    $data .= "<table border='1'>";
+                
+                    // First row (column headers)
+                    $data .= "<tr><th>$pivotColumn</th>";
+                    foreach ($valueColumnsArray as $valueColumn) {
+                        $data .= "<th>" . htmlspecialchars($valueColumn) . "</th>";
+                    }
+                    $data .= "</tr>";
+                
+                    // Data rows
+                    foreach ($uniqueValues as $value) {
+                        $data .= "<tr>";
+                        $data .= "<td>" . htmlspecialchars($value) . "</td>";
+                        foreach ($valueColumnsArray as $valueColumn) {
+                            $data .= "<td>" . htmlspecialchars($results[0][$valueColumn . "($value)"] ?? '') . "</td>";
+                        }
+                        $data .= "</tr>";
+                    }
+                    $data .= "</table>";
                     break;
-                            
+                 
 
         default:
             throw new Exception('Invalid report type.');
