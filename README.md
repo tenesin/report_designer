@@ -8,3 +8,10 @@
    username : admin
    password : admin
 7. explore it
+
+**Account**
+username : admin
+password : password
+
+username : user
+password : password
