@@ -7,9 +7,9 @@
 6. login with account below
 7. explore the report generator
 
-**Account**
-username : admin
-password : password
-
-username : user
+**Account**&nbsp;
+- username : admin&nbsp;
+- password : password
+&ensp;
+username : user&nbsp;
 password : password
