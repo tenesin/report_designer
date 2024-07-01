@@ -8,8 +8,8 @@
 7. explore the report generator
 
 **Account**&nbsp;
-username : admin&nbsp;
-password : password
+- username : admin&nbsp;
+- password : password
 &ensp;
-username : user&nbsp;
-password : password
+- username : user&nbsp;
+- password : password
