@@ -4,14 +4,12 @@
 3. running mysql and apache in xampp
 4. open **localhost/phpmyadmin** to check database
 5. go to **localhost/report_designer**
-6. login with
-   username : admin
-   password : admin
-7. explore it
+6. login with account below
+7. explore the report generator
 
 **Account**
-username : admin
-password : password
+- username : admin
+- password : password
 
-username : user
-password : password
+- username : user
+- password : password
