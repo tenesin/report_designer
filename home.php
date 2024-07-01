@@ -108,7 +108,9 @@ require 'db.php';
     </form>
 
     <div id="reportResult"></div>
-    <button type="button" id="exportButton" style="display: none;" onclick="exportToExcel()">Export to Excel</button>
+    <?php if ($_SESSION['role'] == 'admin') { ?>
+        <button type="button" id="exportButton" style="display: none;" onclick="exportToExcel()">Export to Excel</button>
+    <?php } ?>
 <button type="button" id="unpivotButton" style="display: none;" onclick="unpivotReport()">Unpivot</button>
 
     <script>

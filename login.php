@@ -7,8 +7,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $username = $_POST['username'];
     $password = $_POST['password'];
 
+    // Here you can add your user validation logic
+    // For simplicity, let's use static credentials
     if ($username == 'admin' && $password == 'password') {
         $_SESSION['loggedin'] = true;
+        $_SESSION['role'] = 'admin'; // Setting role to admin
+        header('Location: home.php');
+        exit;
+    } elseif ($username == 'user' && $password == 'password') {
+        $_SESSION['loggedin'] = true;
+        $_SESSION['role'] = 'user'; // Setting role to user
         header('Location: home.php');
         exit;
     } else {

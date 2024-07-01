@@ -210,7 +210,7 @@ try {
                     $query = $db->query($pivotQuery);
                     $results = $query->fetchAll(PDO::FETCH_ASSOC);
                 
-                    $data .= "<h2>Pivot Report</h2>";
+                    $data .= "<h2>Unpivot Report</h2>";
                     $data .= "<table border='1'>";
                 
                     // First row (column headers)
